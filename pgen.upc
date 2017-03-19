@@ -28,18 +28,21 @@ int main(int argc, char **argv) {
     FILE *inputFile, *serialOutputFile;
     /* Read the input file name */
     input_UFX_name = argv[1];
-
+    printf("Start reading!\n");
     /* ============== GRAPH CONSTRUCTION ============== */
 
     start = clock();
     /* Initialize lookup table that will be used for the DNA packing routines */
     init_LookupTable();
-
+    printf("Start 00000\n");
     /* Extract the number of k-mers in the input file */
+    upc_lock_t * file_lock =upc_all_lock_alloc();
+    upc_lock(file_lock);
+    printf("end 00000\n");
     nKmers = getNumKmersInUFX(input_UFX_name);
-    //hash_table_t *hashtable;
-
-
+    printf("start 11111!\n");
+    upc_unlock(file_lock);
+    printf("Finish 11111!");
 
     /* Read the kmers from the input file and store them in the working_buffer */
 
@@ -47,16 +50,18 @@ int main(int argc, char **argv) {
     // read the Kumer info into local threads
     const int Kmer_local = (MYTHREAD == THREADS - 1) ? nKmers - (THREADS - 1) * Kmers_per_thread : Kmers_per_thread;
 
-
+    printf("Finish 2222!");
     /* Read the kmers from the input file and store them in the working_buffer */
     total_chars_to_read = nKmers * LINE_SIZE;
     unsigned char * full_buffer = (unsigned char *) malloc(total_chars_to_read * sizeof(unsigned char));
+    upc_lock(file_lock);
     inputFile = fopen(input_UFX_name, "r");
     cur_chars_read = fread(full_buffer, sizeof(unsigned char), total_chars_to_read, inputFile);
     fclose(inputFile);
+    upc_unlock(file_lock);
     working_buffer = (unsigned char *) malloc(Kmer_local * sizeof(unsigned char));
     memcpy(working_buffer,&full_buffer[THREADS*Kmers_per_thread*LINE_SIZE],Kmer_local*LINE_SIZE);
-
+    printf("Finish reading!");
     upc_barrier;
 
     /* Create a hash table */
@@ -97,6 +102,7 @@ int main(int argc, char **argv) {
         /* Move to the next k-mer in the input working_buffer */
         ptr += LINE_SIZE;
     }
+    printf("Finish init!");
 
     upc_barrier;
     end = clock();
