@@ -10,15 +10,13 @@
 
 shared hash_table_t * hashtable;
 shared memory_heap_t memory_heap;
+upc_lock_t** shared lock_array;
 
-typedef struct unpacked_kmer {
-    unsigned char data[LINE_SIZE];
-} unpacked_kmer_t;
 
+/* Creates a hash table and (pre)allocates memory for the memory heap */
 
 
 int main(int argc, char **argv) {
-
     time_t start, end;
     double constrTime, traversalTime;
     char cur_contig[MAXIMUM_CONTIG_SIZE], unpackedKmer[KMER_LENGTH + 1], left_ext, right_ext, *input_UFX_name;
@@ -57,24 +55,24 @@ int main(int argc, char **argv) {
 
     /* Read the kmers from the input file and store them in the working_buffer */
     total_chars_to_read = nKmers * LINE_SIZE;
-    full_buffer = (unsigned char *) malloc(total_chars_to_read * sizeof(unsigned char));
+    unsigned char * full_buffer = (unsigned char *) malloc(total_chars_to_read * sizeof(unsigned char));
     inputFile = fopen(input_UFX_name, "r");
     cur_chars_read = fread(full_buffer, sizeof(unsigned char), total_chars_to_read, inputFile);
     fclose(inputFile);
     working_buffer = (unsigned char *) malloc(Kmer_local * sizeof(unsigned char));
-    memcpy(working_buffer,&full_buffer[THREAD*Kmers_per_thread*LINE_SIZE],Kmer_local*LINE_SIZE);
+    memcpy(working_buffer,&full_buffer[THREADS*Kmers_per_thread*LINE_SIZE],Kmer_local*LINE_SIZE);
 
     upc_barrier;
 
     /* Create a hash table */
     //local nkerms
-    create_hash_table(nKmers, &memory_heap, hashtable);
+    create_hash_table(nKmers,&memory_heap,hashtable);
     upc_barrier;
     /* Process the working_buffer and store the k-mers in the hash table */
     /* Expected format: KMER LR ,i.e. first k characters that represent the kmer, then a tab and then two chatacers, one for the left (backward) extension and one for the right (forward) extension */
 
     int64_t table_size = hashtable->size;
-    upc_lock_t *lock_array[table_size];
+    lock_array =(upc_lock_t**) malloc(table_size*sizeof(upc_lock_t*));
     for (int i = 0; i < table_size; i++) {
         lock_array[i] = upc_all_lock_alloc();
     }
@@ -89,7 +87,7 @@ int main(int argc, char **argv) {
 
         /* Pack a k-mer sequence appropriately */
         char packedKmer[KMER_PACKED_LENGTH];
-        packSequence(kmer, (unsigned char *) packedKmer, KMER_LENGTH);
+        packSequence(&working_buffer[ptr], (unsigned char *) packedKmer, KMER_LENGTH); // &working_buffer[ptr] = kmer
         int64_t hashval = hashkmer(hashtable->size, (char *) packedKmer);
         upc_lock(lock_array[hashval]);
         /* Add k-mer to hash table */

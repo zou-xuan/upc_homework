@@ -7,31 +7,33 @@
 #include <sys/time.h>
 #include <math.h> 
 #include <string.h>
-#include <upc.h>
 #include "contig_generation.h"
 
-/* Creates a hash table and (pre)allocates memory for the memory heap */
-void create_hash_table(int64_t nEntries, memory_heap_t *memory_heap,hash_table_t *result) {
-    // hash_table_t *result;
+
+void testallo(){
+    upc_all_alloc(1,6);
+}
+
+void create_hash_table(int64_t nEntries,shared memory_heap_t* memory_heap,shared hash_table_t* hashtable) {
+// hash_table_t *result;
     int64_t n_buckets = nEntries * LOAD_FACTOR;
 
-    result = (hash_table_t *) upc_all_alloc(1,sizeof(hash_table_t));
-    result->size = n_buckets;
-    result->table = (bucket_t *) upc_all_alloc(n_buckets, sizeof(bucket_t));
+    hashtable = (shared hash_table_t *) upc_all_alloc(1,sizeof(hash_table_t));
+    hashtable->size = n_buckets;
+    hashtable->table = (bucket_t *) upc_all_alloc(n_buckets, sizeof(bucket_t));
 
-    if (result->table == NULL) {
+    if (hashtable->table == NULL) {
         fprintf(stderr, "ERROR: Could not allocate memory for the hash table: %lld buckets of %lu bytes\n", n_buckets,
-                sizeof(bucket_t));
+        sizeof(bucket_t));
         exit(1);
     }
 
     memory_heap->heap = (kmer_t *) upc_alloc(nEntries * sizeof(kmer_t));
     if (memory_heap->heap == NULL) {
-        fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
-        exit(1);
+    fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
+    exit(1);
     }
     memory_heap->posInHeap = 0;
-
 }
 
 /* Auxiliary function for computing hash values */
@@ -51,7 +53,7 @@ int64_t hashkmer(int64_t hashtable_size, char *seq) {
 }
 
 /* Looks up a kmer in the hash table and returns a pointer to that entry */
-kmer_t *lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer) {
+kmer_t *lookup_kmer(shared hash_table_t *hashtable, const unsigned char *kmer) {
     char packedKmer[KMER_PACKED_LENGTH];
     packSequence(kmer, (unsigned char *) packedKmer, KMER_LENGTH);
     int64_t hashval = hashkmer(hashtable->size, (char *) packedKmer);
@@ -71,11 +73,11 @@ kmer_t *lookup_kmer(hash_table_t *hashtable, const unsigned char *kmer) {
 }
 
 /* Adds a kmer and its extensions in the hash table (note that a memory heap should be preallocated. ) */
-int add_kmer(hash_table_t *hashtable, memory_heap_t *memory_heap, const unsigned char *kmer, char left_ext,
+int add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, const unsigned char *kmer, char left_ext,
              char right_ext,int64_t hashval) {
     /* Pack a k-mer sequence appropriately */
-//    char packedKmer[KMER_PACKED_LENGTH];
-//    packSequence(kmer, (unsigned char *) packedKmer, KMER_LENGTH);
+    char packedKmer[KMER_PACKED_LENGTH];
+    packSequence(kmer, (unsigned char *) packedKmer, KMER_LENGTH);
 //    int64_t hashval = hashkmer(hashtable->size, (char *) packedKmer);
     int64_t pos = memory_heap->posInHeap;
 
@@ -96,7 +98,7 @@ int add_kmer(hash_table_t *hashtable, memory_heap_t *memory_heap, const unsigned
 }
 
 /* Adds a k-mer in the start list by using the memory heap (the k-mer was "just added" in the memory heap at position posInHeap - 1) */
-void addKmerToStartList(memory_heap_t *memory_heap, start_kmer_t **startKmersList) {
+void addKmerToStartList(shared memory_heap_t *memory_heap, start_kmer_t **startKmersList) {
     start_kmer_t *new_entry;
     kmer_t *ptrToKmer;
 
