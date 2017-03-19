@@ -3,7 +3,7 @@
 
 #include <math.h>
 #include <assert.h>
-#include <string.h>
+//#include <string.h>
 
 unsigned int packedCodeToFourMer[256];
 

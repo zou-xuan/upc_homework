@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <math.h> 
-#include <string.h>
+//#include <string.h>
 #include "contig_generation.h"
 
 void create_hash_table(int64_t nEntries,shared memory_heap_t* memory_heap,shared hash_table_t* hashtable) {

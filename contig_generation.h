@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <string.h>
+//#include <string.h>
 
 #ifndef MAXIMUM_CONTIG_SIZE
 #define MAXIMUM_CONTIG_SIZE 100000
