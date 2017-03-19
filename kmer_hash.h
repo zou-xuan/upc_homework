@@ -1,4 +1,4 @@
-#include <upc.h>
+
 #ifndef KMER_HASH_H
 #define KMER_HASH_H
 
@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <math.h> 
 #include <string.h>
+#include <upc.h>
 #include "contig_generation.h"
 
 /* Creates a hash table and (pre)allocates memory for the memory heap */
