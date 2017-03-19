@@ -1,4 +1,3 @@
-
 #ifndef KMER_HASH_H
 #define KMER_HASH_H
 
@@ -8,11 +7,6 @@
 #include <math.h> 
 #include <string.h>
 #include "contig_generation.h"
-
-
-void testallo(){
-    upc_all_alloc(1,6);
-}
 
 void create_hash_table(int64_t nEntries,shared memory_heap_t* memory_heap,shared hash_table_t* hashtable) {
 // hash_table_t *result;
