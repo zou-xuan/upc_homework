@@ -10,7 +10,7 @@
 
 shared hash_table_t * hashtable;
 shared memory_heap_t memory_heap;
-upc_lock_t** shared lock_array;
+upc_lock_t* shared *lock_array;
 
 
 /* Creates a hash table and (pre)allocates memory for the memory heap */
@@ -68,35 +68,49 @@ int main(int argc, char **argv) {
 
     /* Create a hash table */
     //local nkerms
-    create_hash_table(nKmers,&memory_heap,hashtable);
+    hashtable = create_hash_table(nKmers,&memory_heap);
+    printf("after create, hashtable->size is %d\n",hashtable->size);
     upc_barrier;
     /* Process the working_buffer and store the k-mers in the hash table */
     /* Expected format: KMER LR ,i.e. first k characters that represent the kmer, then a tab and then two chatacers, one for the left (backward) extension and one for the right (forward) extension */
-
+    printf("testing!!!!!\n");
     int64_t table_size = hashtable->size;
-//    lock_array =(upc_lock_t**) malloc(table_size*sizeof(upc_lock_t*));
-//    for (int i = 0; i < table_size; i++) {
-//        lock_array[i] = upc_all_lock_alloc();
-//    }
+    lock_array =upc_all_alloc(table_size,sizeof(upc_lock_t*));
+    //for (int i = 0; i < table_size; i++) {
+    //    //printf("%d\n",i);
+    //    lock_array[i] = upc_all_lock_alloc();
+    //}
+    int i;
+    upc_forall(i=0;i<table_size;i++;i){
+        lock_array[i]= upc_all_lock_alloc();
+    }
     upc_barrier;
     printf("Start 4444!\n");
-    while (ptr < cur_chars_read) {
+
+    printf("In main, hashtable->size is %d\n",hashtable->size);
+
+    while (ptr < Kmer_local*LINE_SIZE) {
         /* working_buffer[ptr] is the start of the current k-mer                */
         /* so current left extension is at working_buffer[ptr+KMER_LENGTH+1]    */
         /* and current right extension is at working_buffer[ptr+KMER_LENGTH+2]  */
 
         left_ext = (char) working_buffer[ptr + KMER_LENGTH + 1];
         right_ext = (char) working_buffer[ptr + KMER_LENGTH + 2];
+        printf("Testing\n");
+        printf("ptr is %d, limit is %d\n",ptr,Kmer_local*LINE_SIZE);
 
         /* Pack a k-mer sequence appropriately */
         char packedKmer[KMER_PACKED_LENGTH];
+        printf("T1\n");
         packSequence(&working_buffer[ptr], (unsigned char *) packedKmer, KMER_LENGTH); // &working_buffer[ptr] = kmer
+        printf("%d, %s\n",hashtable->size,packedKmer);
         int64_t hashval = hashkmer(hashtable->size, (char *) packedKmer);
-//        upc_lock(lock_array[hashval]);
+        printf("Start add_kmer\n");
+        upc_lock(lock_array[hashval]);
         /* Add k-mer to hash table */
         add_kmer(hashtable, &memory_heap, &working_buffer[ptr], left_ext, right_ext, hashval);
-//        upc_unlock(lock_array[hashval]);
-
+        upc_unlock(lock_array[hashval]);
+        printf("End add_kmer\n");
         /* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
         if (left_ext == 'F') {
             addKmerToStartList(&memory_heap, &startKmersList);
@@ -105,7 +119,7 @@ int main(int argc, char **argv) {
         /* Move to the next k-mer in the input working_buffer */
         ptr += LINE_SIZE;
     }
-    printf("Finish 44444!\n");
+    printf("Finish 55555!\n");
 
     upc_barrier;
     end = clock();

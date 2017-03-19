@@ -8,13 +8,15 @@
 //#include <string.h>
 #include "contig_generation.h"
 
-void create_hash_table(int64_t nEntries,shared memory_heap_t* memory_heap,shared hash_table_t* hashtable) {
-// hash_table_t *result;
+shared hash_table_t*  create_hash_table(int64_t nEntries, shared memory_heap_t* memory_heap) {
+    shared hash_table_t *hashtable;
     int64_t n_buckets = nEntries * LOAD_FACTOR;
 
     hashtable = (shared hash_table_t *) upc_all_alloc(1,sizeof(hash_table_t));
     hashtable->size = n_buckets;
     hashtable->table = (bucket_t *) upc_all_alloc(n_buckets, sizeof(bucket_t));
+
+    printf("hashtable->size is %d\n",hashtable->size);
 
     if (hashtable->table == NULL) {
         fprintf(stderr, "ERROR: Could not allocate memory for the hash table: %lld buckets of %lu bytes\n", n_buckets,
@@ -24,10 +26,11 @@ void create_hash_table(int64_t nEntries,shared memory_heap_t* memory_heap,shared
 
     memory_heap->heap = (kmer_t *) upc_alloc(nEntries * sizeof(kmer_t));
     if (memory_heap->heap == NULL) {
-    fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
-    exit(1);
+        fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
+        exit(1);
     }
     memory_heap->posInHeap = 0;
+    return hashtable;
 }
 
 /* Auxiliary function for computing hash values */
