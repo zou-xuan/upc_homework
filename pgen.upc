@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     nKmers = getNumKmersInUFX(input_UFX_name);
     printf("start 11111!\n");
     upc_unlock(file_lock);
-    printf("Finish 11111!");
+    printf("Finish 11111!\n");
 
     /* Read the kmers from the input file and store them in the working_buffer */
 
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     // read the Kumer info into local threads
     const int Kmer_local = (MYTHREAD == THREADS - 1) ? nKmers - (THREADS - 1) * Kmers_per_thread : Kmers_per_thread;
 
-    printf("Finish 2222!");
+    printf("Finish 2222!\n");
     /* Read the kmers from the input file and store them in the working_buffer */
     total_chars_to_read = nKmers * LINE_SIZE;
     unsigned char * full_buffer = (unsigned char *) malloc(total_chars_to_read * sizeof(unsigned char));
@@ -59,9 +59,11 @@ int main(int argc, char **argv) {
     cur_chars_read = fread(full_buffer, sizeof(unsigned char), total_chars_to_read, inputFile);
     fclose(inputFile);
     upc_unlock(file_lock);
-    working_buffer = (unsigned char *) malloc(Kmer_local * sizeof(unsigned char));
-    memcpy(working_buffer,&full_buffer[THREADS*Kmers_per_thread*LINE_SIZE],Kmer_local*LINE_SIZE);
-    printf("Finish reading!");
+    printf("start 3333!\n");
+    working_buffer = (unsigned char *) malloc(Kmer_local*LINE_SIZE * sizeof(unsigned char));
+    printf("kerms local: %d\n",Kmer_local);
+    memcpy(working_buffer,&full_buffer[MYTHREAD*Kmers_per_thread*LINE_SIZE],Kmer_local*LINE_SIZE);
+    printf("Finish 3333!\n");
     upc_barrier;
 
     /* Create a hash table */
@@ -77,6 +79,7 @@ int main(int argc, char **argv) {
 //        lock_array[i] = upc_all_lock_alloc();
 //    }
     upc_barrier;
+    printf("Start 4444!\n");
     while (ptr < cur_chars_read) {
         /* working_buffer[ptr] is the start of the current k-mer                */
         /* so current left extension is at working_buffer[ptr+KMER_LENGTH+1]    */
@@ -102,7 +105,7 @@ int main(int argc, char **argv) {
         /* Move to the next k-mer in the input working_buffer */
         ptr += LINE_SIZE;
     }
-    printf("Finish init!");
+    printf("Finish 44444!\n");
 
     upc_barrier;
     end = clock();
